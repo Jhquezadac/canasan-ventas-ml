@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CANASAN — Analítica predictiva del cierre de ventas (demo)</title>
+<style>
+  :root {
+    --bg: #fafafa; --surface: #ffffff; --ink: #111827; --muted: #6b7280;
+    --line: #e5e7eb; --accent: #1d4ed8; --accent-soft: #eff6ff;
+    --green: #15803d; --red: #b91c1c; --amber: #b45309;
+    --hover: #f9fafb; --zebra: #fafbff;
+    --c1: #1d4ed8; --c2: #7c3aed; --c3: #059669; --c4: #d97706;
+    --th-bg: #eef2ff; --th-ink: #312e81; --th-line: #a5b4fc;
+  }
+  html.dark {
+    --bg: #0b1120; --surface: #111827; --ink: #e5e7eb; --muted: #94a3b8;
+    --line: #1f2937; --accent: #60a5fa; --accent-soft: #172554;
+    --green: #4ade80; --red: #f87171; --amber: #fbbf24;
+    --hover: #1f2937; --zebra: #0f172a;
+    --c1: #60a5fa; --c2: #a78bfa; --c3: #34d399; --c4: #fbbf24;
+    --th-bg: #1e1b4b; --th-ink: #c7d2fe; --th-line: #3730a3;
+  }
+  html.dark body { color-scheme: dark; }
+  html.dark table.thesis th { background: var(--th-bg); color: var(--th-ink); }
+  html.dark table.thesis th, html.dark table.thesis td { border-color: #312e5a; }
+  html.dark table.thesis tr:nth-child(even) td { background: #0f172a; }
+  html.dark .action:hover { box-shadow: 0 2px 10px rgba(0,0,0,.5); }
+  html.dark .btn-plain { background: var(--surface); }
+  html.dark input[type=number]::-webkit-inner-spin-button { opacity: .4; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--ink); font-size: 15px; line-height: 1.55;
+  }
+  .mono, table.data td, table.data th { font-variant-numeric: tabular-nums; }
+
+  /* topbar */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 32px; background: var(--surface); border-bottom: 1px solid var(--line);
+    position: sticky; top: 0; z-index: 10;
+  }
+  .brand { font-weight: 700; color: var(--ink); text-decoration: none; font-size: 14px; letter-spacing: .02em; }
+  .brand span { font-weight: 400; color: var(--muted); margin-left: 8px; font-size: 13px; }
+  .topnav { display: flex; gap: 22px; }
+  .topnav a {
+    color: var(--muted); text-decoration: none; font-size: 13px; letter-spacing: .03em;
+    padding-bottom: 2px; border-bottom: 1.5px solid transparent;
+  }
+  .topnav a:hover { color: var(--ink); }
+  .topnav a.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+
+  main { max-width: 1060px; margin: 0 auto; padding: 40px 32px 80px; }
+
+  /* portada */
+  .portada { display: flex; gap: 64px; align-items: flex-start; margin-top: 48px; }
+  .portada-info { flex: 1; }
+  .eyebrow { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
+  h1 { font-size: 34px; line-height: 1.2; font-weight: 700; letter-spacing: -.01em; max-width: 26ch; }
+  .lead { margin-top: 18px; color: var(--muted); max-width: 52ch; font-size: 14.5px; }
+  .stat-row { display: flex; gap: 40px; margin-top: 36px; }
+  .stat-row dt { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  .stat-row dd { font-size: 22px; font-weight: 700; margin-top: 2px; color: var(--accent); }
+  .portada-actions { width: 320px; display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
+  .action {
+    display: flex; align-items: center; gap: 16px; padding: 18px 20px;
+    background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--accent);
+    border-radius: 6px;
+    text-decoration: none; color: var(--ink); font-size: 15px; font-weight: 600;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .action:hover { box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+  .action .num { font-size: 12px; font-weight: 700; letter-spacing: .08em; }
+  .action .desc { display: block; font-size: 12px; color: var(--muted); font-weight: 400; margin-top: 1px; }
+  .action.a1 { border-left-color: var(--c1); } .action.a1 .num { color: var(--c1); }
+  .action.a2 { border-left-color: var(--c2); } .action.a2 .num { color: var(--c2); }
+  .action.a3 { border-left-color: var(--c3); } .action.a3 .num { color: var(--c3); }
+  .action.a4 { border-left-color: var(--c4); } .action.a4 .num { color: var(--c4); }
+
+  /* secciones */
+  .page-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 28px; }
+  h2 { font-size: 22px; font-weight: 700; letter-spacing: -.01em; }
+  .page-sub { color: var(--muted); font-size: 13.5px; margin-top: 4px; }
+  .back { color: var(--muted); text-decoration: none; font-size: 13px; }
+  .back:hover { color: var(--ink); }
+
+  .block { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 24px; margin-bottom: 24px; }
+  .block h3 { font-size: 14px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; margin-bottom: 14px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  @media (max-width: 860px) { .portada { flex-direction: column; gap: 32px; } .portada-actions { width: 100%; } .grid2 { grid-template-columns: 1fr; } }
+
+  /* tablas */
+  table.data { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.data th {
+    text-align: left; font-size: 11px; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--muted); font-weight: 600; padding: 8px 10px; border-bottom: 1px solid var(--ink);
+  }
+  table.data td { padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  table.data tr:hover td { background: var(--hover); }
+  table.data td.num, table.data th.num { text-align: right; }
+  table.data td.ctr, table.data th.ctr { text-align: center; }
+  table.data tr.best td { background: var(--accent-soft); font-weight: 600; }
+  table.data tbody tr:nth-child(even) td { background: var(--zebra); }
+  .scroll { overflow-x: auto; }
+
+  /* ficha tesis */
+  .ficha-meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px 24px; font-size: 13px; margin-bottom: 20px; }
+  .ficha-meta .k { font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .ficha-meta .v { color: var(--ink); }
+  table.thesis { width: 100%; border-collapse: collapse; font-size: 12.5px; text-align: center; }
+  table.thesis th, table.thesis td { border: 1px solid var(--th-line); padding: 5px 8px; }
+  table.thesis th { background: var(--th-bg); color: var(--th-ink); font-weight: 700; font-size: 11.5px; }
+  table.thesis tr:nth-child(even) td { background: #f8fafc; }
+  .nota { font-size: 12px; color: var(--muted); margin-top: 10px; }
+
+  /* badges y form */
+  .tag { font-size: 11px; font-weight: 700; letter-spacing: .06em; }
+  .t-alta { color: var(--green); } .t-media { color: var(--amber); } .t-baja { color: var(--red); }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 20px; max-width: 560px; }
+  .field label { display: block; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; }
+  .field input, .field select {
+    width: 100%; padding: 9px 10px; border: 1px solid var(--line); border-radius: 4px;
+    font-size: 14px; background: var(--surface); color: var(--ink);
+  }
+  .field input:focus, .field select:focus { outline: none; border-color: var(--ink); }
+  .btn {
+    margin-top: 20px; padding: 10px 22px; background: var(--accent); color: #fff; border: none;
+    border-radius: 4px; font-size: 13.5px; font-weight: 600; cursor: pointer; letter-spacing: .02em;
+  }
+  .btn:hover { background: #1e40af; }
+  .btn-plain { background: var(--surface); color: var(--ink); border: 1px solid var(--line); }
+  .btn-plain:hover { border-color: var(--accent); background: var(--surface); }
+  .theme-btn {
+    background: none; border: 1px solid var(--line); border-radius: 999px;
+    width: 34px; height: 34px; cursor: pointer; font-size: 15px; color: var(--ink);
+    display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .theme-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .top-right { display: flex; align-items: center; gap: 16px; }
+
+  /* resultado predicción */
+  .pred-result { margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--line); }
+  .prob-big { font-size: 46px; font-weight: 700; letter-spacing: -.02em; line-height: 1; }
+  .prob-label { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .reco { color: var(--muted); font-size: 14px; max-width: 60ch; margin-top: 10px; }
+
+  /* barras CSS */
+  .bar-row { display: grid; grid-template-columns: 150px 1fr 52px; gap: 10px; align-items: center; font-size: 13px; padding: 4px 0; }
+  .bar-track { background: var(--line); height: 8px; border-radius: 4px; overflow: hidden; }
+  .bar-fill { background: var(--accent); height: 100%; border-radius: 4px; }
+  .bar-val { text-align: right; color: var(--muted); font-size: 12px; }
+
+  .kpi-strip { display: flex; flex-wrap: wrap; gap: 32px; margin-bottom: 28px; }
+  .kpi-strip .k { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .kpi-strip .v { font-size: 20px; font-weight: 700; margin-top: 2px; }
+  .err { color: var(--red); font-size: 14px; }
+  .muted { color: var(--muted); font-size: 13.5px; }
+
+  @media print {
+    .topbar, .noprint { display: none !important; }
+    main { padding: 0; max-width: none; }
+    .block { border: none; padding: 0; }
+    body { background: #fff; }
+  }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="#portada">CANASAN<span>Analítica predictiva del cierre de ventas</span></a>
+  <div class="top-right">
+    <nav class="topnav">
+      <a href="#ficha" data-view="ficha">01 Ficha de registro</a>
+      <a href="#metricas" data-view="metricas">02 Métricas</a>
+      <a href="#resultados" data-view="resultados">03 Resultados</a>
+      <a href="#prediccion" data-view="prediccion">04 Predicción</a>
+    </nav>
+    <button id="theme-btn" class="theme-btn" title="Cambiar modo claro/oscuro">◐</button>
+  </div>
+</header>
+<main id="view"></main>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>const DATA = {"ficha": {"cabecera": {"investigador": "Quezada Carbajal, Jhoseph", "tipo_registro": "Histórico (2021–2026)", "fuente": "Base de datos comercial CANASAN (hoja VENTAS); excluye cocheras y depósitos vendidos de forma independiente", "fecha_inicio": "29/03/2021", "fecha_fin": "26/08/2026", "fecha_registro": "13/10/2026", "total_ops": 187}, "ficha_tpv": {"indicador": "Tiempo promedio de venta (TPV)", "dimension": "Celeridad del proceso comercial", "medida": "Días", "promedio_general": 219.8, "total_filas": 84, "filas": [{"n": 1, "codigo": 1, "fecha_registro": "13/10/2026", "fecha_sep": "20210329", "fecha_cie": "20221004", "proy_dpto": "RUBI - 201", "dias": 554, "prom": 554.0}, {"n": 2, "codigo": 2, "fecha_registro": "13/10/2026", "fecha_sep": "20210403", "fecha_cie": "20220805", "proy_dpto": "RUBI - 701", "dias": 489, "prom": 521.5}, {"n": 3, "codigo": 3, "fecha_registro": "13/10/2026", "fecha_sep": "20210529", "fecha_cie": "20220613", "proy_dpto": "RUBI - 801", "dias": 380, "prom": 474.3}, {"n": 4, "codigo": 4, "fecha_registro": "13/10/2026", "fecha_sep": "20210730", "fecha_cie": "20220908", "proy_dpto": "RUBI - 402", "dias": 405, "prom": 457.0}, {"n": 5, "codigo": 5, "fecha_registro": "13/10/2026", "fecha_sep": "20210817", "fecha_cie": "20220908", "proy_dpto": "RUBI - 501", "dias": 387, "prom": 443.0}, {"n": 6, "codigo": 6, "fecha_registro": "13/10/2026", "fecha_sep": "20210922", "fecha_cie": "20211222", "proy_dpto": "RUBI - 101", "dias": 91, "prom": 384.3}, {"n": 7, "codigo": 7, "fecha_registro": "13/10/2026", "fecha_sep": "20211008", "fecha_cie": "20220916", "proy_dpto": "RUBI - 502", "dias": 343, "prom": 378.4}, {"n": 8, "codigo": 8, "fecha_registro": "13/10/2026", "fecha_sep": "20211109", "fecha_cie": "20220908", "proy_dpto": "RUBI - 602", "dias": 303, "prom": 369.0}, {"n": 9, "codigo": 9, "fecha_registro": "13/10/2026", "fecha_sep": "20211119", "fecha_cie": "20211220", "proy_dpto": "RUBI - 202", "dias": 31, "prom": 331.4}, {"n": 10, "codigo": 10, "fecha_registro": "13/10/2026", "fecha_sep": "20220105", "fecha_cie": "20220908", "proy_dpto": "RUBI - 302", "dias": 246, "prom": 322.9}, {"n": 11, "codigo": 11, "fecha_registro": "13/10/2026", "fecha_sep": "20220113", "fecha_cie": "20220113", "proy_dpto": "RUBI - 202", "dias": 0, "prom": 293.5}, {"n": 12, "codigo": 12, "fecha_registro": "13/10/2026", "fecha_sep": "20220114", "fecha_cie": "20220613", "proy_dpto": "RUBI - 901", "dias": 150, "prom": 281.6}, {"n": 13, "codigo": 13, "fecha_registro": "13/10/2026", "fecha_sep": "20220215", "fecha_cie": "20220805", "proy_dpto": "RUBI - 702", "dias": 171, "prom": 273.1}, {"n": 14, "codigo": 14, "fecha_registro": "13/10/2026", "fecha_sep": "20220218", "fecha_cie": "20220908", "proy_dpto": "RUBI - 602", "dias": 202, "prom": 268.0}, {"n": 15, "codigo": 15, "fecha_registro": "13/10/2026", "fecha_sep": "20220301", "fecha_cie": "20220331", "proy_dpto": "RUBI - 102", "dias": 30, "prom": 252.1}, {"n": 16, "codigo": 16, "fecha_registro": "13/10/2026", "fecha_sep": "20220412", "fecha_cie": "20221116", "proy_dpto": "ESMERALDA - 302", "dias": 218, "prom": 250.0}, {"n": 17, "codigo": 17, "fecha_registro": "13/10/2026", "fecha_sep": "20220815", "fecha_cie": "20230313", "proy_dpto": "ESMERALDA - 202", "dias": 210, "prom": 247.6}, {"n": 18, "codigo": 18, "fecha_registro": "13/10/2026", "fecha_sep": "20220818", "fecha_cie": "20230310", "proy_dpto": "ESMERALDA - 502", "dias": 204, "prom": 245.2}, {"n": 19, "codigo": 19, "fecha_registro": "13/10/2026", "fecha_sep": "20221031", "fecha_cie": "20231111", "proy_dpto": "ESMERALDA - 501", "dias": 376, "prom": 252.1}, {"n": 20, "codigo": 20, "fecha_registro": "13/10/2026", "fecha_sep": "20221031", "fecha_cie": "20231111", "proy_dpto": "ESMERALDA - 501", "dias": 376, "prom": 258.3}]}, "ficha_tecv": {"indicador": "Tasa de éxito en cierre de ventas (TECV)", "dimension": "Efectividad de la gestión comercial", "medida": "%", "total_filas": 23, "filas": [{"n": 1, "codigo": 1, "fecha_registro": "13/10/2026", "fecha_eval": "20210331", "anticipo": 2, "cerradas": 1, "pct": 50.0, "prom": 50.0}, {"n": 2, "codigo": 2, "fecha_registro": "13/10/2026", "fecha_eval": "20210630", "anticipo": 5, "cerradas": 3, "pct": 60.0, "prom": 55.0}, {"n": 3, "codigo": 3, "fecha_registro": "13/10/2026", "fecha_eval": "20210930", "anticipo": 8, "cerradas": 6, "pct": 75.0, "prom": 61.7}, {"n": 4, "codigo": 4, "fecha_registro": "13/10/2026", "fecha_eval": "20211231", "anticipo": 14, "cerradas": 9, "pct": 64.3, "prom": 62.3}, {"n": 5, "codigo": 5, "fecha_registro": "13/10/2026", "fecha_eval": "20220331", "anticipo": 22, "cerradas": 15, "pct": 68.2, "prom": 63.5}, {"n": 6, "codigo": 6, "fecha_registro": "13/10/2026", "fecha_eval": "20220630", "anticipo": 23, "cerradas": 16, "pct": 69.6, "prom": 64.5}, {"n": 7, "codigo": 7, "fecha_registro": "13/10/2026", "fecha_eval": "20220930", "anticipo": 29, "cerradas": 18, "pct": 62.1, "prom": 64.2}, {"n": 8, "codigo": 8, "fecha_registro": "13/10/2026", "fecha_eval": "20221231", "anticipo": 34, "cerradas": 20, "pct": 58.8, "prom": 63.5}, {"n": 9, "codigo": 9, "fecha_registro": "13/10/2026", "fecha_eval": "20230331", "anticipo": 42, "cerradas": 23, "pct": 54.8, "prom": 62.5}, {"n": 10, "codigo": 10, "fecha_registro": "13/10/2026", "fecha_eval": "20230630", "anticipo": 50, "cerradas": 28, "pct": 56.0, "prom": 61.9}, {"n": 11, "codigo": 11, "fecha_registro": "13/10/2026", "fecha_eval": "20230930", "anticipo": 61, "cerradas": 34, "pct": 55.7, "prom": 61.3}, {"n": 12, "codigo": 12, "fecha_registro": "13/10/2026", "fecha_eval": "20231231", "anticipo": 68, "cerradas": 36, "pct": 52.9, "prom": 60.6}, {"n": 13, "codigo": 13, "fecha_registro": "13/10/2026", "fecha_eval": "20240331", "anticipo": 80, "cerradas": 44, "pct": 55.0, "prom": 60.2}, {"n": 14, "codigo": 14, "fecha_registro": "13/10/2026", "fecha_eval": "20240630", "anticipo": 89, "cerradas": 49, "pct": 55.1, "prom": 59.8}, {"n": 15, "codigo": 15, "fecha_registro": "13/10/2026", "fecha_eval": "20240930", "anticipo": 102, "cerradas": 57, "pct": 55.9, "prom": 59.6}, {"n": 16, "codigo": 16, "fecha_registro": "13/10/2026", "fecha_eval": "20241231", "anticipo": 111, "cerradas": 60, "pct": 54.1, "prom": 59.2}, {"n": 17, "codigo": 17, "fecha_registro": "13/10/2026", "fecha_eval": "20250331", "anticipo": 124, "cerradas": 68, "pct": 54.8, "prom": 59.0}, {"n": 18, "codigo": 18, "fecha_registro": "13/10/2026", "fecha_eval": "20250630", "anticipo": 134, "cerradas": 74, "pct": 55.2, "prom": 58.8}, {"n": 19, "codigo": 19, "fecha_registro": "13/10/2026", "fecha_eval": "20250930", "anticipo": 147, "cerradas": 75, "pct": 51.0, "prom": 58.3}, {"n": 20, "codigo": 20, "fecha_registro": "13/10/2026", "fecha_eval": "20251231", "anticipo": 161, "cerradas": 80, "pct": 49.7, "prom": 57.9}]}}, "dashboard": {"total_ops": 187, "cerradas": 84, "anuladas": 19, "en_proceso": 84, "tecv_conservadora": 44.92, "tecv_resueltas": 81.55, "tpv_global": 219.8, "prob_promedio": 0.6276, "valor_pipeline": 20566241.8941, "ventas_proyectadas": 18308780.31092657, "serie_mensual": [{"mes": "2025-03", "cerradas": 4, "separaciones": 5}, {"mes": "2025-04", "cerradas": 5, "separaciones": 4}, {"mes": "2025-05", "cerradas": 1, "separaciones": 3}, {"mes": "2025-06", "cerradas": 1, "separaciones": 3}, {"mes": "2025-07", "cerradas": 4, "separaciones": 1}, {"mes": "2025-08", "cerradas": 6, "separaciones": 10}, {"mes": "2025-09", "cerradas": 0, "separaciones": 2}, {"mes": "2025-10", "cerradas": 6, "separaciones": 5}, {"mes": "2025-11", "cerradas": 0, "separaciones": 6}, {"mes": "2025-12", "cerradas": 0, "separaciones": 3}, {"mes": "2026-01", "cerradas": 0, "separaciones": 1}, {"mes": "2026-02", "cerradas": 4, "separaciones": 2}, {"mes": "2026-03", "cerradas": 1, "separaciones": 0}, {"mes": "2026-04", "cerradas": 0, "separaciones": 6}, {"mes": "2026-05", "cerradas": 0, "separaciones": 4}, {"mes": "2026-06", "cerradas": 5, "separaciones": 4}, {"mes": "2026-07", "cerradas": 0, "separaciones": 5}, {"mes": "2026-08", "cerradas": 2, "separaciones": 4}], "por_proyecto": [{"proyecto": "RUBI", "cerradas": 15, "anuladas": 4, "en_proceso": 2, "separaciones": 21, "tecv": 71.4}, {"proyecto": "SANTORINI", "cerradas": 16, "anuladas": 4, "en_proceso": 3, "separaciones": 23, "tecv": 69.6}, {"proyecto": "ROMA", "cerradas": 14, "anuladas": 5, "en_proceso": 7, "separaciones": 26, "tecv": 53.8}, {"proyecto": "CAPRI", "cerradas": 12, "anuladas": 0, "en_proceso": 12, "separaciones": 24, "tecv": 50.0}, {"proyecto": "ESMERALDA", "cerradas": 11, "anuladas": 1, "en_proceso": 19, "separaciones": 31, "tecv": 35.5}, {"proyecto": "POSITANO", "cerradas": 10, "anuladas": 4, "en_proceso": 17, "separaciones": 31, "tecv": 32.3}, {"proyecto": "MARBELLA", "cerradas": 6, "anuladas": 1, "en_proceso": 24, "separaciones": 31, "tecv": 19.4}], "embudo": {"separaciones": 187, "en_proceso": 84, "cerradas": 84, "anuladas": 19}}, "modelo": {"activo": "XGBoost", "tabla": [{"Modelo": "XGBoost", "Accuracy": 0.8538, "Precision": 0.9172, "Recall": 0.9051, "F1": 0.9094, "AUC": 0.8143}, {"Modelo": "LogisticRegression", "Accuracy": 0.7467, "Precision": 0.9164, "Recall": 0.7743, "F1": 0.8308, "AUC": 0.8071}, {"Modelo": "DecisionTree", "Accuracy": 0.8238, "Precision": 0.9122, "Recall": 0.8684, "F1": 0.8886, "AUC": 0.7755}, {"Modelo": "GradientBoosting", "Accuracy": 0.8633, "Precision": 0.9167, "Recall": 0.9162, "F1": 0.9155, "AUC": 0.7611}, {"Modelo": "KNN", "Accuracy": 0.8348, "Precision": 0.8458, "Recall": 0.9765, "F1": 0.9063, "AUC": 0.7016}, {"Modelo": "RandomForest", "Accuracy": 0.9019, "Precision": 0.9219, "Recall": 0.9647, "F1": 0.9415, "AUC": 0.6914}], "holdout": {"accuracy": 0.8077, "precision": 0.8636, "recall": 0.9048, "f1": 0.8837, "auc": 0.7, "matriz": [[2, 3], [2, 19]], "roc": {"fpr": [0.0, 0.0, 0.0, 0.0, 0.0, 0.2, 0.2, 0.4, 0.4, 0.6, 0.6, 1.0], "tpr": [0.0, 0.0476, 0.1429, 0.2381, 0.2857, 0.2857, 0.381, 0.4286, 0.8095, 0.8095, 1.0, 1.0]}}, "importancias": [{"factor": "MONTO_TOTAL", "peso": 0.2326, "peso_pct": 23.3}, {"factor": "PROY_RUBI", "peso": 0.2014, "peso_pct": 20.1}, {"factor": "N_PAGOS", "peso": 0.1816, "peso_pct": 18.2}, {"factor": "ANIO_SEP", "peso": 0.1498, "peso_pct": 15.0}, {"factor": "PROY_ROMA", "peso": 0.1061, "peso_pct": 10.6}, {"factor": "MES_SEP", "peso": 0.0833, "peso_pct": 8.3}, {"factor": "PROY_SANTORINI", "peso": 0.0452, "peso_pct": 4.5}, {"factor": "PROY_ESMERALDA", "peso": 0.0, "peso_pct": 0.0}, {"factor": "PROY_MARBELLA", "peso": 0.0, "peso_pct": 0.0}, {"factor": "PROY_POSITANO", "peso": 0.0, "peso_pct": 0.0}], "n_registros": 103, "tasa_cierre": 81.55, "umbral_alta": 0.7, "umbral_media": 0.4, "features": ["MONTO_TOTAL", "N_PAGOS", "MES_SEP", "ANIO_SEP", "PROY_ESMERALDA", "PROY_MARBELLA", "PROY_POSITANO", "PROY_ROMA", "PROY_RUBI", "PROY_SANTORINI"], "entrenado": "2026-10-11 10:19:00"}, "analisis": {"top_pipeline": [{"proyecto": "ESMERALDA", "dpto": "801", "cliente": "QUIROZ NEIRA FABIAN ENRIQUE", "monto_total": 325500.0, "n_pagos": 1, "prob": 0.9954, "etiqueta": "ALTA"}, {"proyecto": "POSITANO", "dpto": "401", "cliente": "ACUÑA VILLALBA MIGUEL ANGEL", "monto_total": 305000.0, "n_pagos": 4, "prob": 0.9934, "etiqueta": "ALTA"}, {"proyecto": "ESMERALDA", "dpto": "903", "cliente": "SANCHEZ Y GUZMAN LUIS ANTONIO", "monto_total": 570000.0, "n_pagos": 3, "prob": 0.9926, "etiqueta": "ALTA"}, {"proyecto": "POSITANO", "dpto": "601", "cliente": "MAMANI CABALLERO KATTIA NOEMI", "monto_total": 300000.0, "n_pagos": 4, "prob": 0.9925, "etiqueta": "ALTA"}, {"proyecto": "CAPRI", "dpto": "701", "cliente": "LEVANO LUCANO LUCIANO", "monto_total": 463500.0, "n_pagos": 4, "prob": 0.9906, "etiqueta": "ALTA"}, {"proyecto": "MARBELLA", "dpto": "901", "cliente": "PORTOCARRERO MARDELIT", "monto_total": 478000.0, "n_pagos": 2, "prob": 0.9905, "etiqueta": "ALTA"}, {"proyecto": "MARBELLA", "dpto": "704", "cliente": "MINAYA RODRIGUEZ KATHIA CORINA", "monto_total": 391000.0, "n_pagos": 2, "prob": 0.9905, "etiqueta": "ALTA"}, {"proyecto": "CAPRI", "dpto": "201", "cliente": "LINARES DE LA GUARDA JOSE LUIS ROBERTO", "monto_total": 530000.0, "n_pagos": 4, "prob": 0.9896, "etiqueta": "ALTA"}, {"proyecto": "CAPRI", "dpto": "902", "cliente": "PAREDES SEMINARIO RAYSA MARISE", "monto_total": 589500.0, "n_pagos": 4, "prob": 0.989, "etiqueta": "ALTA"}, {"proyecto": "MARBELLA", "dpto": "304", "cliente": "SACHIKO ELIZABETH KAMEYA MILLA", "monto_total": 460750.0, "n_pagos": 4, "prob": 0.9883, "etiqueta": "ALTA"}], "en_riesgo": [{"proyecto": "MARBELLA", "dpto": "701", "cliente": "ROBLES BUSTOS NAIR", "monto_total": 5000.0, "n_pagos": 1, "prob": 0.0393, "etiqueta": "BAJA"}, {"proyecto": "MARBELLA", "dpto": "502", "cliente": "RIVADENEIRA MALLQUI SANDRA THALIA", "monto_total": 5000.0, "n_pagos": 1, "prob": 0.0419, "etiqueta": "BAJA"}, {"proyecto": "ESMERALDA", "dpto": "401", "cliente": "PERALTA VERASTEGUI MARIA YSABEL", "monto_total": 5000.0, "n_pagos": 1, "prob": 0.0461, "etiqueta": "BAJA"}, {"proyecto": "MARBELLA", "dpto": "703", "cliente": "YANETH PEÑA PALOMINO", "monto_total": 24000.0, "n_pagos": 4, "prob": 0.0517, "etiqueta": "BAJA"}, {"proyecto": "MARBELLA", "dpto": "703", "cliente": "CRISOLES QUIJAITE DIEGO ALONSO", "monto_total": 24000.0, "n_pagos": 4, "prob": 0.0517, "etiqueta": "BAJA"}, {"proyecto": "MARBELLA", "dpto": "804", "cliente": "SANCHEZ RAMOS KARINA", "monto_total": 0.0, "n_pagos": 2, "prob": 0.0608, "etiqueta": "BAJA"}, {"proyecto": "MARBELLA", "dpto": "902", "cliente": "BRUNO GIANCARLO GIANOTTI MARTINEZ", "monto_total": 10050.0, "n_pagos": 4, "prob": 0.0709, "etiqueta": "BAJA"}, {"proyecto": "MARBELLA", "dpto": "904", "cliente": "GIANFRANCO CLAUDETT ORDOÑEZ ARAOZ", "monto_total": 22071.0, "n_pagos": 3, "prob": 0.0745, "etiqueta": "BAJA"}, {"proyecto": "MARBELLA", "dpto": "904", "cliente": "RUTH MARIANA OTERO ARBIZA", "monto_total": 22071.0, "n_pagos": 3, "prob": 0.0745, "etiqueta": "BAJA"}, {"proyecto": "MARBELLA", "dpto": "902", "cliente": "JEFFERSON EFRAIN QUISPE RUIZ", "monto_total": 10050.0, "n_pagos": 2, "prob": 0.0765, "etiqueta": "BAJA"}], "rendimiento": [{"proyecto": "RUBI", "cerradas": 15, "anuladas": 4, "en_proceso": 2, "separaciones": 21, "tecv": 71.4}, {"proyecto": "SANTORINI", "cerradas": 16, "anuladas": 4, "en_proceso": 3, "separaciones": 23, "tecv": 69.6}, {"proyecto": "ROMA", "cerradas": 14, "anuladas": 5, "en_proceso": 7, "separaciones": 26, "tecv": 53.8}, {"proyecto": "CAPRI", "cerradas": 12, "anuladas": 0, "en_proceso": 12, "separaciones": 24, "tecv": 50.0}, {"proyecto": "ESMERALDA", "cerradas": 11, "anuladas": 1, "en_proceso": 19, "separaciones": 31, "tecv": 35.5}, {"proyecto": "POSITANO", "cerradas": 10, "anuladas": 4, "en_proceso": 17, "separaciones": 31, "tecv": 32.3}, {"proyecto": "MARBELLA", "cerradas": 6, "anuladas": 1, "en_proceso": 24, "separaciones": 31, "tecv": 19.4}], "factores": [{"factor": "MONTO_TOTAL", "peso": 0.2326, "peso_pct": 23.3}, {"factor": "PROY_RUBI", "peso": 0.2014, "peso_pct": 20.1}, {"factor": "N_PAGOS", "peso": 0.1816, "peso_pct": 18.2}, {"factor": "ANIO_SEP", "peso": 0.1498, "peso_pct": 15.0}, {"factor": "PROY_ROMA", "peso": 0.1061, "peso_pct": 10.6}, {"factor": "MES_SEP", "peso": 0.0833, "peso_pct": 8.3}, {"factor": "PROY_SANTORINI", "peso": 0.0452, "peso_pct": 4.5}, {"factor": "PROY_ESMERALDA", "peso": 0.0, "peso_pct": 0.0}, {"factor": "PROY_MARBELLA", "peso": 0.0, "peso_pct": 0.0}, {"factor": "PROY_POSITANO", "peso": 0.0, "peso_pct": 0.0}], "tpv_proyecto": [{"proyecto": "SANTORINI", "tpv_dias": 329.9, "n": 16}, {"proyecto": "RUBI", "tpv_dias": 252.1, "n": 15}, {"proyecto": "ESMERALDA", "tpv_dias": 226.1, "n": 11}, {"proyecto": "ROMA", "tpv_dias": 217.1, "n": 14}, {"proyecto": "POSITANO", "tpv_dias": 154.7, "n": 10}, {"proyecto": "MARBELLA", "tpv_dias": 137.2, "n": 6}, {"proyecto": "CAPRI", "tpv_dias": 125.6, "n": 12}], "ventas_futuras": 18308780.31092657, "prob_promedio": 0.6276}, "lr": {"coef": [1.27348, 0.127144, -0.220586, -0.437714, -0.796967, -0.015506, -0.280358, -0.385962, -0.983702, -0.644738], "intercept": [0.663721], "mean": [292039.5134, 5.1039, 5.8571, 2023.8052, 0.1169, 0.0909, 0.1688, 0.1558, 0.1299, 0.1948], "scale": [168471.2768, 3.4362, 3.1652, 1.3584, 0.3213, 0.2875, 0.3746, 0.3627, 0.3362, 0.3961], "features": ["MONTO_TOTAL", "N_PAGOS", "MES_SEP", "ANIO_SEP", "PROY_ESMERALDA", "PROY_MARBELLA", "PROY_POSITANO", "PROY_ROMA", "PROY_RUBI", "PROY_SANTORINI"], "holdout": {"accuracy": 0.6538, "precision": 0.8333, "recall": 0.7143, "f1": 0.7692, "auc": 0.6667, "matriz": [[2, 3], [6, 15]], "roc": {"fpr": [0.0, 0.0, 0.0, 0.2, 0.2, 0.4, 0.4, 0.6, 0.6, 0.6, 0.6, 1.0], "tpr": [0.0, 0.0476, 0.0952, 0.0952, 0.5714, 0.5714, 0.6667, 0.6667, 0.7619, 0.8571, 1.0, 1.0]}}, "importancias": [{"factor": "MONTO_TOTAL", "peso": 1.2735, "peso_pct": 24.7}, {"factor": "PROY_RUBI", "peso": 0.9837, "peso_pct": 19.0}, {"factor": "PROY_ESMERALDA", "peso": 0.797, "peso_pct": 15.4}, {"factor": "PROY_SANTORINI", "peso": 0.6447, "peso_pct": 12.5}, {"factor": "ANIO_SEP", "peso": 0.4377, "peso_pct": 8.5}, {"factor": "PROY_ROMA", "peso": 0.386, "peso_pct": 7.5}, {"factor": "PROY_POSITANO", "peso": 0.2804, "peso_pct": 5.4}, {"factor": "MES_SEP", "peso": 0.2206, "peso_pct": 4.3}, {"factor": "N_PAGOS", "peso": 0.1271, "peso_pct": 2.5}, {"factor": "PROY_MARBELLA", "peso": 0.0155, "peso_pct": 0.3}], "tabla": [{"Modelo": "XGBoost", "Accuracy": 0.8538, "Precision": 0.9172, "Recall": 0.9051, "F1": 0.9094, "AUC": 0.8143}, {"Modelo": "LogisticRegression", "Accuracy": 0.7467, "Precision": 0.9164, "Recall": 0.7743, "F1": 0.8308, "AUC": 0.8071}, {"Modelo": "DecisionTree", "Accuracy": 0.8238, "Precision": 0.9122, "Recall": 0.8684, "F1": 0.8886, "AUC": 0.7755}, {"Modelo": "GradientBoosting", "Accuracy": 0.8633, "Precision": 0.9167, "Recall": 0.9162, "F1": 0.9155, "AUC": 0.7611}, {"Modelo": "KNN", "Accuracy": 0.8348, "Precision": 0.8458, "Recall": 0.9765, "F1": 0.9063, "AUC": 0.7016}, {"Modelo": "RandomForest", "Accuracy": 0.9019, "Precision": 0.9219, "Recall": 0.9647, "F1": 0.9415, "AUC": 0.6914}]}, "umbral_alta": 0.7, "umbral_media": 0.4};</script>
+<script src="app.js"></script>
+</body>
+</html>
