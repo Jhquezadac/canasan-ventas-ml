@@ -38,15 +38,19 @@ async def lifespan(app: FastAPI):
     db.init_db()
     global _estado_stats, _modelo_cache
     ops = db.fetch_operaciones()
-    if ops.empty:
+    if ops.empty and DATA_XLSX.exists():
         ventas, operaciones, stats = pipeline.cargar_dataset(DATA_XLSX)
         db.bulk_insert_operaciones(operaciones, fuente="dataset")
         _estado_stats = stats
         db.log_dataset(DATA_XLSX.name, stats["filas_validas"], len(operaciones), "Carga inicial")
+        ops = db.fetch_operaciones()
     else:
         try:
-            _, _, stats = pipeline.cargar_dataset(DATA_XLSX)
-            _estado_stats = stats
+            if DATA_XLSX.exists():
+                _, _, stats = pipeline.cargar_dataset(DATA_XLSX)
+                _estado_stats = stats
+            else:
+                _estado_stats = {}
         except Exception:
             _estado_stats = {}
     cargado = False
@@ -58,8 +62,8 @@ async def lifespan(app: FastAPI):
                 cargado = True
         except Exception:
             cargado = False
-    if not cargado:
-        _entrenar_y_activar(db.fetch_operaciones(), "inicial")
+    if not cargado and not ops.empty:
+        _entrenar_y_activar(ops, "inicial")
     yield
 
 
@@ -87,6 +91,14 @@ class PrediccionIn(BaseModel):
 
 # ---------- helpers ----------
 def _kpis_y_series(ops: pd.DataFrame, modelo) -> dict:
+    if ops.empty:
+        return {
+            "total_ops": 0, "cerradas": 0, "anuladas": 0, "en_proceso": 0,
+            "tecv_conservadora": 0, "tecv_resueltas": 0, "tpv_global": 0,
+            "prob_promedio": None, "valor_pipeline": 0, "ventas_proyectadas": 0,
+            "serie_mensual": [], "por_proyecto": [],
+            "embudo": {"separaciones": 0, "en_proceso": 0, "cerradas": 0, "anuladas": 0},
+        }
     cerradas = int((ops["ESTADO"] == "CERRADA").sum())
     anuladas = int((ops["ESTADO"] == "ANULADA").sum())
     en_proceso = int((ops["ESTADO"] == "EN_PROCESO").sum())
@@ -242,8 +254,8 @@ def ficha():
 @app.get("/api/dashboard")
 def dashboard():
     ops = db.fetch_operaciones()
-    m = _modelo_o_500()
-    return _kpis_y_series(ops, m["modelo"])
+    modelo = _modelo_cache["modelo"] if _modelo_cache else None
+    return _kpis_y_series(ops, modelo)
 
 
 # ---------- Oportunidades ----------
