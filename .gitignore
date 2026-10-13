@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Runtime (se regenera automáticamente al iniciar)
+storage/
+
+# Datos con información personal (DNI/nombres de clientes) — no se publican
+data/*.xlsx
+
+# Sistema
+.DS_Store
+Thumbs.db
